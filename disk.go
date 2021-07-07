@@ -7,13 +7,15 @@
 //  - "disk.free" (gauge)
 //  - "disk.used" (gauge)
 //
-package disk
+package main
 
-import "github.com/statsd/client-interface"
-import "github.com/deniswernert/go-fstab"
-import "github.com/c9s/goprocinfo/linux"
-import "github.com/segmentio/go-log"
-import "time"
+import (
+	"github.com/statsd/client-interface"
+	log "github.com/sirupsen/logrus"
+	"github.com/deniswernert/go-fstab"
+	"github.com/c9s/goprocinfo/linux"
+	"time"
+)
 
 // Disk resource.
 type Disk struct {
@@ -22,8 +24,8 @@ type Disk struct {
 	exit     chan struct{}
 }
 
-// New disk resource.
-func New(interval time.Duration) *Disk {
+// NewDisk New disk resource.
+func NewDisk(interval time.Duration) *Disk {
 	return &Disk{
 		Interval: interval,
 		exit:     make(chan struct{}),
@@ -63,12 +65,12 @@ func (d *Disk) Report() {
 
 	paths, err := d.paths()
 	if err != nil {
-		log.Error("disk: failed to read fstab: %s", err)
-		log.Error("disk: will not report")
+		log.Errorf("disk: failed to read fstab: %s", err)
+		log.Errorf("disk: will not report")
 		return
 	}
 
-	log.Info("disk: discovered %v", paths)
+	log.Infof("disk: discovered %v", paths)
 
 	for {
 		select {
@@ -77,17 +79,17 @@ func (d *Disk) Report() {
 				stat, err := linux.ReadDisk(path)
 
 				if err != nil {
-					log.Error("disk: %s %s", path, err)
+					log.Errorf("disk: %s %s", path, err)
 					continue
 				}
 
-				d.client.Gauge(path+".percent", int(percent(stat.Used, stat.All)))
+				d.client.Gauge(path+".percent", int(percentDisk(stat.Used, stat.All)))
 				d.client.Gauge(path+".free", int(stat.Free))
 				d.client.Gauge(path+".used", int(stat.Used))
 			}
 
 		case <-d.exit:
-			log.Info("disk: exiting")
+			log.Infof("disk: exiting")
 			return
 		}
 	}
@@ -100,6 +102,6 @@ func (d *Disk) Stop() error {
 }
 
 // calculate percentage.
-func percent(a, b uint64) uint64 {
+func percentDisk(a, b uint64) uint64 {
 	return uint64(float64(a) / float64(b) * 100)
 }

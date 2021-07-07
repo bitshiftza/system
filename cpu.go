@@ -9,11 +9,11 @@
 //  - "blocked" (counter)
 //  - "usage" (gauge)
 //
-package cpu
+package main
 
 import "github.com/statsd/client-interface"
 import "github.com/c9s/goprocinfo/linux"
-import "github.com/segmentio/go-log"
+import log "github.com/sirupsen/logrus"
 import "time"
 
 // CPU resource.
@@ -25,8 +25,8 @@ type CPU struct {
 	exit     chan struct{}
 }
 
-// New CPU resource.
-func New(interval time.Duration, extended bool) *CPU {
+// NewCPU New CPU resource.
+func NewCPU(interval time.Duration, extended bool) *CPU {
 	return &CPU{
 		Path:     "/proc/stat",
 		Extended: extended,
@@ -63,12 +63,12 @@ func (c *CPU) Report() {
 				continue
 			}
 
-			c.client.Gauge("percent", int(percent(&prevIdle, &prevTotal, stat.CPUStatAll)))
+			_ = c.client.Gauge("percent", int(cpuPercent(&prevIdle, &prevTotal, stat.CPUStatAll)))
 
 			if c.Extended {
-				c.client.IncrBy("blocked", int(stat.ProcsBlocked))
-				c.client.IncrBy("interrupts", int(stat.Interrupts-prev.Interrupts))
-				c.client.IncrBy("switches", int(stat.ContextSwitches-prev.ContextSwitches))
+				_ = c.client.IncrBy("blocked", int(stat.ProcsBlocked))
+				_ = c.client.IncrBy("interrupts", int(stat.Interrupts-prev.Interrupts))
+				_ = c.client.IncrBy("switches", int(stat.ContextSwitches-prev.ContextSwitches))
 			}
 
 			prev = stat
@@ -88,7 +88,7 @@ func (c *CPU) Stop() error {
 
 // calculate percentage from the previous read
 // and adjust the previous values.
-func percent(prevIdle, prevTotal *uint64, s linux.CPUStat) float64 {
+func cpuPercent(prevIdle, prevTotal *uint64, s linux.CPUStat) float64 {
 	total, idle := totals(s)
 	di := idle - *prevIdle
 	dt := total - *prevTotal

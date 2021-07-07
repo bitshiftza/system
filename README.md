@@ -35,12 +35,8 @@
  Via go-get:
 
 ```
-$ go get github.com/statsd/system
+$ go get github.com/bitshiftza/system
 ```
-
- Via binaries:
-
-Coming soon!
 
 ## Metrics
 

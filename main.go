@@ -1,18 +1,18 @@
 package main
 
-import "github.com/statsd/system/pkg/collector"
-import "github.com/statsd/system/pkg/memory"
-import "github.com/statsd/client-namespace"
-import "github.com/statsd/system/pkg/disk"
-import "github.com/statsd/system/pkg/cpu"
-import . "github.com/tj/go-gracefully"
-import "github.com/segmentio/go-log"
-import "github.com/statsd/client"
-import "github.com/tj/docopt"
-import "time"
-import "os"
+import (
+	"github.com/statsd/client-namespace"
+)
+import (
+	log "github.com/sirupsen/logrus"
+	"github.com/statsd/client"
+	"github.com/tj/docopt"
+	. "github.com/tj/go-gracefully"
+	"os"
+	"time"
+)
 
-const Version = "0.2.0"
+const Version = "0.3.0"
 
 const Usage = `
   Usage:
@@ -39,34 +39,48 @@ const Usage = `
 
 func main() {
 	args, err := docopt.Parse(Usage, nil, true, Version, false)
-	log.Check(err)
+	if err != nil {
+		log.Fatalf("could not parse options: %v", err)
+	}
 
 	log.Info("starting system %s", Version)
 
 	client, err := statsd.Dial(args["--statsd-address"].(string))
-	log.Check(err)
+	if err != nil {
+		log.Fatalf("could not initialize stastd client: %v", err)
+	}
 
 	extended := args["--extended"].(bool)
 
 	name := args["--name"].(string)
 	if "hostname" == name {
 		host, err := os.Hostname()
-		log.Check(err)
+		if err != nil {
+			log.Fatalf("could not get hostname: %v", err)
+		}
 		name = host
 	}
 
-	c := collector.New(namespace.New(client, name))
-	c.Add(memory.New(interval(args, "--memory-interval"), extended))
-	c.Add(cpu.New(interval(args, "--cpu-interval"), extended))
-	c.Add(disk.New(interval(args, "--disk-interval")))
+	c := NewCollector(namespace.New(client, name))
+	c.Add(NewMemory(interval(args, "--memory-interval"), extended))
+	c.Add(NewCPU(interval(args, "--cpu-interval"), extended))
+	c.Add(NewDisk(interval(args, "--disk-interval")))
 
-	c.Start()
+	err = c.Start()
+	if err != nil {
+		log.Fatalf("could not start collector: %v", err)
+	}
 	Shutdown()
-	c.Stop()
+	err = c.Stop()
+	if err != nil {
+		log.Fatalf("could not stop collector: %v", err)
+	}
 }
 
 func interval(args map[string]interface{}, name string) time.Duration {
 	d, err := time.ParseDuration(args[name].(string))
-	log.Check(err)
+	if err != nil {
+		log.Fatalf("could not parse duration: %v", err)
+	}
 	return d
 }

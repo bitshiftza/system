@@ -1,6 +1,6 @@
 
 build:
-	gox -os="linux darwin" -arch=amd64
+	go build -o system-stats
 
 clean:
 	git clean -fd

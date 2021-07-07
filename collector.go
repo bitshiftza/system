@@ -2,23 +2,23 @@
 // The Collector handles starting and stopping of
 // all of the resources, and flushes stats on shutdown.
 //
-package collector
+package main
 
 import "github.com/statsd/system/pkg/resource"
 import "github.com/statsd/client-namespace"
 import "github.com/statsd/client-interface"
-import "github.com/segmentio/go-log"
+import log "github.com/sirupsen/logrus"
 import "sync"
 
-// Collector.
+// Collector ...
 type Collector struct {
 	Resources []resource.Resource
 	client    statsd.Client
 	wg        sync.WaitGroup
 }
 
-// New collector with the given statsd client.
-func New(client statsd.Client) *Collector {
+// NewCollector New collector with the given statsd client.
+func NewCollector(client statsd.Client) *Collector {
 	return &Collector{
 		client: client,
 	}

@@ -11,11 +11,11 @@
 //  - "swap.total" (gauge)
 //  - "swap.free" (gauge)
 //
-package memory
+package main
 
 import "github.com/statsd/client-interface"
 import "github.com/c9s/goprocinfo/linux"
-import "github.com/segmentio/go-log"
+import log "github.com/sirupsen/logrus"
 import "math"
 import "time"
 
@@ -28,8 +28,8 @@ type Memory struct {
 	exit     chan struct{}
 }
 
-// New memory resource.
-func New(interval time.Duration, extended bool) *Memory {
+// NewMemory New memory resource.
+func NewMemory(interval time.Duration, extended bool) *Memory {
 	return &Memory{
 		Path:     "/proc/meminfo",
 		Extended: extended,
@@ -63,16 +63,16 @@ func (m *Memory) Report() {
 				continue
 			}
 
-			m.client.Gauge("percent", percent(stat))
-			m.client.Gauge("swap.percent", swapPercent(stat))
+			_ = m.client.Gauge("percent", percent(stat))
+			_ = m.client.Gauge("swap.percent", swapPercent(stat))
 
 			if m.Extended {
-				m.client.Gauge("total", bytes(stat["MemTotal"]))
-				m.client.Gauge("used", bytes(used(stat)))
-				m.client.Gauge("free", bytes(stat["MemFree"]))
-				m.client.Gauge("active", bytes(stat["Active"]))
-				m.client.Gauge("swap.total", bytes(stat["SwapTotal"]))
-				m.client.Gauge("swap.free", bytes(stat["SwapFree"]))
+				_ = m.client.Gauge("total", bytes(stat.MemTotal))
+				_ = m.client.Gauge("used", bytes(used(stat)))
+				_ = m.client.Gauge("free", bytes(stat.MemFree))
+				_ = m.client.Gauge("active", bytes(stat.Active))
+				_ = m.client.Gauge("swap.total", bytes(stat.SwapTotal))
+				_ = m.client.Gauge("swap.free", bytes(stat.SwapFree))
 			}
 
 		case <-m.exit:
@@ -89,9 +89,9 @@ func (m *Memory) Stop() error {
 }
 
 // calculate swap percentage.
-func swapPercent(s linux.MemInfo) int {
-	total := s["SwapTotal"]
-	used := total - s["SwapFree"]
+func swapPercent(s *linux.MemInfo) int {
+	total := s.SwapTotal
+	used := total - s.SwapFree
 	p := float64(used) / float64(total) * 100
 
 	if math.IsNaN(p) {
@@ -102,8 +102,8 @@ func swapPercent(s linux.MemInfo) int {
 }
 
 // calculate percentage.
-func percent(s linux.MemInfo) int {
-	total := s["MemTotal"]
+func percent(s *linux.MemInfo) int {
+	total := s.MemTotal
 	p := float64(used(s)) / float64(total) * 100
 
 	if math.IsNaN(p) {
@@ -114,8 +114,8 @@ func percent(s linux.MemInfo) int {
 }
 
 // used memory.
-func used(s linux.MemInfo) uint64 {
-	return s["MemTotal"] - s["MemFree"] - s["Buffers"] - s["Cached"]
+func used(s *linux.MemInfo) uint64 {
+	return s.MemTotal - s.MemFree - s.Buffers - s.Cached
 }
 
 // convert to bytes.
